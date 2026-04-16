@@ -151,6 +151,86 @@ def lista_adjacencia( G: nx.Graph, ponderado: bool = False, digrafo: bool = Fals
     return lista_adj
 
 
+def contar_trilhas_simples(G, u, v, k):
+    """
+    Conta e exibe caminhos simples de u até v com comprimento <= k.
+    Retorna o número total de caminhos encontrados.
+    """
+    def dfs_recursiva(atual, destino, k_restante, caminho_atual, visitados):
+        # Se atingiu o destino, o caminho é válido
+        if atual == destino:
+            print(f"Caminho encontrado: {' -> '.join(caminho_atual)} (Comprimento: {len(caminho_atual)-1})")
+            return 1
+        
+        # Se o limite de passos k acabou, interrompe essa busca
+        if k_restante <= 0:
+            return 0
+        
+        total = 0
+        visitados.add(atual)
+        
+        # Explora vizinhos
+        for vizinho in G.neighbors(atual):
+            if vizinho not in visitados:
+                caminho_atual.append(vizinho)
+                total += dfs_recursiva(vizinho, destino, k_restante - 1, caminho_atual, visitados)
+                caminho_atual.pop() # Backtracking (remove para testar outra rota)
+        
+        visitados.remove(atual) # Permite que o vértice seja usado em outras trilhas
+        return total
 
+    if u not in G or v not in G:
+        print("Vértices de origem ou destino não existem no grafo.")
+        return 0
+
+    print(f"Buscando caminhos entre {u} e {v} com comprimento máximo {k}...")
+    num_trilhas = dfs_recursiva(u, v, k, [u], set())
+    print(f"Total de caminhos encontrados: {num_trilhas}")
+    return num_trilhas
+
+
+
+def verificar_sequencia(G, S):
+    """
+    Verifica se a sequência S é passeio, caminho, trilha ou circuito.
+    """
+    if not S or len(S) < 2:
+        print("Sequência inválida ou muito curta.")
+        return
+
+    e_passeio = True
+    arestas_percorridas = []
+    
+    # 1. Verificar se é Passeio e coletar arestas
+    for i in range(len(S) - 1):
+        u, v = S[i], S[i+1]
+        if G.has_edge(u, v):
+            # Armazenamos como tupla ordenada se for grafo não-direcionado 
+            # para identificar repetição de aresta corretamente
+            aresta = tuple(sorted((u, v))) if not G.is_directed() else (u, v)
+            arestas_percorridas.append(aresta)
+        else:
+            e_passeio = False
+            break
+
+    if not e_passeio:
+        print(f"A sequência {S} NÃO é um passeio válido (arestas inexistentes).")
+        return
+
+    # 2. Verificar se é Trilha (não repete arestas)
+    e_trilha = len(arestas_percorridas) == len(set(arestas_percorridas))
+    
+    # 3. Verificar se é Caminho (não repete vértices)
+    e_caminho = len(S) == len(set(S))
+    
+    # 4. Verificar se é Circuito (Trilha que volta ao início)
+    e_circuito = e_trilha and (S[0] == S[-1])
+
+    # Exibição dos Resultados
+    print(f"\nAnálise da sequência {S}:")
+    print(f"- Passeio: Sim")
+    print(f"- Trilha: {'Sim' if e_trilha else 'Não'}")
+    print(f"- Caminho: {'Sim' if e_caminho else 'Não'}")
+    print(f"- Circuito: {'Sim' if e_circuito else 'Não'}")
 
 

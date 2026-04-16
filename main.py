@@ -21,7 +21,13 @@ if __name__ == "__main__":
     pg.visualizar_grafo(G, ponderado)
 
     # Transformar em matriz 2D
-    print(pg.matriz_2d(G, ponderado, incidencia=True))
+    # print(pg.matriz_2d(G, ponderado, incidencia=True))
 
     # Lista de adjacencias
-    print(pg.lista_adjacencia(G, ponderado))
+    # print(pg.lista_adjacencia(G, ponderado))
+
+    # Contar trilhas simples
+    total = pg.contar_trilhas_simples(G, 'A', 'D', 3)
+
+    # Verificar sequência
+    sequencia = pg.verificar_sequencia(G, ['A', 'B', 'C', 'D'])
