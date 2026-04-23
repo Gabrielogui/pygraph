@@ -234,3 +234,67 @@ def verificar_sequencia(G, S):
     print(f"- Circuito: {'Sim' if e_circuito else 'Não'}")
 
 
+def algoritmo_tarjan(G):
+    """
+    Objetivo: Identificar todas as Componentes Fortemente Conectadas (SCCs) 
+    do dígrafo utilizando uma única busca em profundidade (DFS).
+    """
+    
+    # --- Variáveis Auxiliares ---
+    # discovery_time: Dicionário para armazenar a ordem em que cada nó foi visitado.
+    # low_link: Menor índice de descoberta alcançável a partir do nó (incluindo ele mesmo).
+    # stack: Pilha para manter os nós que estão na DFS atual e podem formar uma SCC.
+    # on_stack: Conjunto para verificação rápida (O(1)) se um nó está na pilha.
+    # sccs: Lista que armazenará as listas de componentes encontradas.
+    
+    discovery_time = {}
+    low_link = {}
+    stack = []
+    on_stack = set()
+    sccs = []
+    tempo = 0 # Contador global para os índices de descoberta
+
+    def dfs_tarjan(u):
+        nonlocal tempo
+        # Inicializa o tempo de descoberta e o low-link do nó atual
+        discovery_time[u] = low_link[u] = tempo
+        tempo += 1
+        stack.append(u)
+        on_stack.add(u)
+
+        # Explora os vizinhos do vértice u
+        for v in G.neighbors(u):
+            # Caso 1: Vizinho ainda não foi visitado
+            if v not in discovery_time:
+                dfs_tarjan(v)
+                # Após a volta da recursão, atualiza o low-link de u
+                low_link[u] = min(low_link[u], low_link[v])
+            
+            # Caso 2: Vizinho está na pilha (faz parte da SCC atual)
+            elif v in on_stack:
+                # Atualiza o low-link com o tempo de descoberta do vizinho
+                low_link[u] = min(low_link[u], discovery_time[v])
+
+        # Se u é a "raiz" de uma SCC (seu low-link é igual ao seu tempo de descoberta)
+        if low_link[u] == discovery_time[u]:
+            nova_scc = []
+            while True:
+                no = stack.pop()
+                on_stack.remove(no)
+                nova_scc.append(no)
+                if no == u: # Para quando voltamos ao nó raiz da SCC
+                    break
+            sccs.append(nova_scc)
+
+    # Garante que todos os vértices sejam visitados (trata grafos desconexos)
+    for vertice in G.nodes():
+        if vertice not in discovery_time:
+            dfs_tarjan(vertice)
+
+    # --- Exibição dos Resultados ---
+    print("\n--- Componentes Fortemente Conectadas (Tarjan) ---")
+    print(f"Total de SCCs encontradas: {len(sccs)}")
+    for i, componente in enumerate(sccs, 1):
+        print(f"SCC {i}: {componente}")
+    
+    return sccs

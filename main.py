@@ -1,5 +1,6 @@
 import pygraph as pg
 import os
+import networkx as nx 
 
 # -------------------------------
 # Exemplo de uso do programa
@@ -27,7 +28,13 @@ if __name__ == "__main__":
     # print(pg.lista_adjacencia(G, ponderado))
 
     # Contar trilhas simples
-    total = pg.contar_trilhas_simples(G, 'A', 'D', 3)
+    # total = pg.contar_trilhas_simples(G, 'A', 'D', 3)
 
     # Verificar sequência
-    sequencia = pg.verificar_sequencia(G, ['A', 'B', 'C', 'D'])
+    # sequencia = pg.verificar_sequencia(G, ['A', 'B', 'C', 'D'])
+
+    if G:
+        if isinstance(G, nx.DiGraph):
+            componentes = pg.algoritmo_tarjan(G)
+        else:
+            print("O algoritmo de Tarjan requer um Dígrafo (D).")
