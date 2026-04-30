@@ -298,3 +298,63 @@ def algoritmo_tarjan(G):
         print(f"SCC {i}: {componente}")
     
     return sccs
+
+
+def algoritmo_dijkstra(G: nx.Graph, origem, destino):
+    
+    d = {float("inf") for u in G.nodes()} # Distância
+    p = {None for u in G.nodes()} # Pai
+    q = [u for u in G.nodes()] # Fila
+
+    print(d)
+
+    d[origem] = 0
+
+    while q :
+        u = min(q, key=lambda node: d[node])
+
+        if u == destino or d[u] == float("inf"):
+            break
+
+        q.remove(u)
+
+        for v in G.neighbors(u):
+            if d[v] > d[u] + G[u][v]["weight"]:
+                d[v] = d[u] + G[u][v]["weight"]
+                p[v] = u
+
+    caminho = [destino]
+    while p[destino] != None:
+        caminho.append(p[destino])
+        destino = p[destino]
+
+    caminho.reverse()
+    return caminho
+
+    '''for u in G.nodes():
+        d.append(float("inf"))
+        p.append(None)
+        q.append(u)
+
+    d[origem] = 0
+
+    while q != None:
+        u = min(d)
+        if u == float("inf"):
+            break
+
+        q.remove(u)
+
+        for v in G.neighbors(u):
+            if d[v] > d[u] + G[u][v]["weight"]:
+                d[v] = d[u] + G[u][v]["weight"]
+                p[v] = u
+    
+    caminho = [destino]
+    while p[destino] != None:
+        caminho.append(p[destino])
+        destino = p[destino]
+
+    caminho.reverse()
+    return caminho'''
+        

@@ -38,3 +38,6 @@ if __name__ == "__main__":
             componentes = pg.algoritmo_tarjan(G)
         else:
             print("O algoritmo de Tarjan requer um Dígrafo (D).")
+
+    # Algoritmo de Dijkstra
+    pg.algoritmo_dijkstra(G, 'A', 'D')
