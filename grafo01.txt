@@ -1,5 +1,9 @@
-G W
-A B 6
-D A 7
-B C 1
-C D 3
+G W 
+A B 4
+A C 10
+B D 7
+B E 3
+C D 6
+C E 2
+E F 11
+D F 1

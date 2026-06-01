@@ -301,32 +301,45 @@ def algoritmo_tarjan(G):
 
 
 def algoritmo_dijkstra(G: nx.Graph, origem, destino):
-    
-    d = {float("inf") for u in G.nodes()} # Distância
-    p = {None for u in G.nodes()} # Pai
-    q = [u for u in G.nodes()] # Fila
-
-    print(d)
+    # 1. Inicialização correta dos dicionários
+    d = {u: float("inf") for u in G.nodes()} 
+    p = {u: None for u in G.nodes()}
+    q = list(G.nodes()) # Fila de nós a visitar
 
     d[origem] = 0
 
-    while q :
+    while q:
+        # 2. Extrair o nó com a menor distância atual
+        # (Em implementações profissionais, usa-se heapq para ser O(log V))
         u = min(q, key=lambda node: d[node])
 
-        if u == destino or d[u] == float("inf"):
+        # Se a menor distância for infinito, os nós restantes são inacessíveis
+        if d[u] == float("inf"):
+            break
+            
+        # Se chegamos ao destino, podemos parar (otimização)
+        if u == destino:
             break
 
         q.remove(u)
 
+        # 3. Relaxamento das arestas vizinhas
         for v in G.neighbors(u):
-            if d[v] > d[u] + G[u][v]["weight"]:
-                d[v] = d[u] + G[u][v]["weight"]
+            peso = G[u][v].get("weight", 1)
+            if d[v] > d[u] + peso:
+                d[v] = d[u] + peso
                 p[v] = u
 
-    caminho = [destino]
-    while p[destino] != None:
-        caminho.append(p[destino])
-        destino = p[destino]
+    # 4. Reconstrução do caminho
+    caminho = []
+    atual = destino
+    # Verifica se o destino é alcançável antes de montar o caminho
+    if d[destino] == float("inf"):
+        return None # Ou [], indicando que não há caminho
+
+    while atual is not None:
+        caminho.append(atual)
+        atual = p[atual]
 
     caminho.reverse()
     return caminho
@@ -358,3 +371,44 @@ def algoritmo_dijkstra(G: nx.Graph, origem, destino):
     caminho.reverse()
     return caminho'''
         
+def algoritmo_bellman_ford(G, origem, destino):
+    # 1. Inicialização: Distância infinita e sem antecessores
+    d = {u: float("inf") for u in G.nodes()}
+    p = {u: None for u in G.nodes()}
+    
+    d[origem] = 0
+
+    # 2. Relaxamento repetido (V - 1 vezes)
+    for _ in range(G.number_of_nodes() - 1):
+        for u, v, data in G.edges(data=True):
+            peso = data.get("weight", 1)
+            
+            # Relaxar aresta u -> v
+            if d[u] != float("inf") and d[v] > d[u] + peso:
+                d[v] = d[u] + peso
+                p[v] = u
+            
+            # Se o grafo for não-direcionado, relaxar v -> u também
+            if not G.is_directed():
+                if d[v] != float("inf") and d[u] > d[v] + peso:
+                    d[u] = d[v] + peso
+                    p[u] = v
+
+    # 3. Verificação de ciclos negativos (Opcional, mas recomendado)
+    for u, v, data in G.edges(data=True):
+        peso = data.get("weight", 1)
+        if d[u] != float("inf") and d[v] > d[u] + peso:
+            raise ValueError("O grafo contém um ciclo de peso negativo!")
+
+    # Reconstruir o caminho do destino para a origem
+    caminho = []
+    atual = destino
+    while atual is not None:
+        caminho.insert(0, atual)
+        atual = p[atual]
+    
+    # Se o primeiro elemento não for a origem, o destino é inacessível
+    if caminho[0] != origem:
+        return float("inf"), []
+
+    return d[destino], caminho

@@ -39,5 +39,10 @@ if __name__ == "__main__":
         else:
             print("O algoritmo de Tarjan requer um Dígrafo (D).")
 
-    # Algoritmo de Dijkstra
-    pg.algoritmo_dijkstra(G, 'A', 'D')
+    # Algoritmo de Bellman-Ford
+    print("Algotimo de Bellman-Ford:")
+    print(pg.algoritmo_bellman_ford(G, 'A', 'F'))
+
+    # Algotitmo de Dijkstra
+    print("Algotimo de Dijkstra:")
+    print(pg.algoritmo_dijkstra(G, 'A', 'F'))
