@@ -412,3 +412,233 @@ def algoritmo_bellman_ford(G, origem, destino):
         return float("inf"), []
 
     return d[destino], caminho
+
+
+def algoritmo_kruskal(G: nx.Graph):
+    """
+    Calcula a Árvore Geradora Mínima (MST) de um grafo utilizando o algoritmo de Kruskal.
+    Retorna um conjunto de tuplas (u, v) representando as arestas da MST.
+    """
+    # Ordena todas as arestas do grafo pelo peso ('weight')
+    arestas_ordenadas = sorted(G.edges(data=True), key=lambda x: x[2].get('weight', 1))
+    
+    # Estrutura Union-Find para controle de ciclos
+    # Inicialmente, cada nó é pai de si mesmo
+    pai = {u: u for u in G.nodes()}
+    
+    def find(u):
+        # Encontra a raiz do conjunto do nó u (com compressão de caminho)
+        if pai[u] != u:
+            pai[u] = find(pai[u])
+        return pai[u]
+        
+    def union(u, v):
+        # Une os conjuntos dos nós u e v
+        raiz_u = find(u)
+        raiz_v = find(v)
+        if raiz_u != raiz_v:
+            pai[raiz_u] = raiz_v
+            return True
+        return False
+
+    mst_edges = set()
+    
+    # Percorre as arestas ordenadas e adiciona na MST se não formarem ciclo
+    for u, v, data in arestas_ordenadas:
+        if union(u, v):
+            # Armazena de forma padronizada (menor, maior) para facilitar a comparação no plot
+            mst_edges.add((min(u, v), max(u, v)))
+            
+            # Uma MST sempre tem exatamente V - 1 arestas. Se atingir, podemos parar.
+            if len(mst_edges) == G.number_of_nodes() - 1:
+                break
+                
+    return mst_edges
+
+def visualizar_grafo_mst(G, mst_edges, ponderado=True):
+    """
+    Desenha o grafo destacando as arestas da MST em azul e as demais em cinza.
+    """
+    pos = nx.spring_layout(G, seed=42) # seed fixo para manter o mesmo layout se rodar mais de uma vez
+    
+    # Separa as arestas em dois grupos com base no retorno do Kruskal
+    arestas_mst = []
+    arestas_restantes = []
+    
+    for u, v in G.edges():
+        aresta_padrao = (min(u, v), max(u, v))
+        if aresta_padrao in mst_edges:
+            arestas_mst.append((u, v))
+        else:
+            arestas_restantes.append((u, v))
+            
+    # 1. Desenha os nós
+    nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=1000)
+    nx.draw_networkx_labels(G, pos, font_size=12)
+    
+    # 2. Desenha as arestas normais (Cinza, mais finas e tracejadas)
+    nx.draw_networkx_edges(G, pos, edgelist=arestas_restantes, edge_color='gray', width=1.5, style='dashed')
+    
+    # 3. Desenha as arestas da MST (Azul, mais grossas)
+    nx.draw_networkx_edges(G, pos, edgelist=arestas_mst, edge_color='blue', width=3.5)
+    
+    # 4. Mostrar pesos se o grafo for ponderado
+    if ponderado:
+        labels = nx.get_edge_attributes(G, 'weight')
+        # Formatação simples para remover o '.0' de números inteiros na exibição
+        labels_formatados = {k: int(v) if v.is_integer() else v for k, v in labels.items()}
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=labels_formatados)
+        
+    plt.title("Árvore Geradora Mínima (Kruskal) - MST em Azul")
+    plt.axis('off') # Remove as bordas dos eixos para um visual mais limpo
+    plt.show()
+
+def ford_fulkerson(G, exibir_passos=True):
+    """
+    Implementa o Algoritmo de Ford-Fulkerson (Edmonds-Karp) para encontrar o fluxo máximo.
+    Retorna o valor do fluxo máximo, os caminhos aumentantes e o dicionário de fluxos finais.
+    """
+    if not isinstance(G, nx.DiGraph):
+        print("Erro: Ford-Fulkerson requer um Gráfico Direcionado (Dígrafo).")
+        return 0, [], {}, None, None
+
+    # 1. Identificar fontes (grau de entrada = 0) e sorvedouros (grau de saída = 0)
+    fontes_nativas = [n for n in G.nodes() if G.in_degree(n) == 0]
+    sorvedouros_nativos = [n for n in G.nodes() if G.out_degree(n) == 0]
+
+    # Criar uma cópia do grafo para trabalhar com a rede de fluxo e os nós fictícios
+    F = G.copy()
+    
+    # Inicializar os fluxos de todas as arestas originais com 0
+    for u, v in F.edges():
+        F[u][v]['flow'] = 0.0
+
+    s_ficticio = "super_source"
+    t_ficticio = "super_sink"
+
+    # Conectar super-origem às fontes nativas
+    for f in fontes_nativas:
+        F.add_edge(s_ficticio, f, weight=float('inf'), flow=0.0)
+    
+    # Conectar sorvedouros nativos ao super-sorvedouro
+    for s in sorvedouros_nativos:
+        F.add_edge(s, t_ficticio, weight=float('inf'), flow=0.0)
+
+    # 2. Função auxiliar BFS para encontrar o caminho aumentante na Rede Residual
+    def encontrar_caminho_bfs(residual_adj, txt_s, txt_t):
+        fila = [txt_s]
+        pais = {txt_s: None}
+        
+        while fila:
+            atual = fila.pop(0)
+            if atual == txt_t:
+                # Reconstruir o caminho
+                caminho = []
+                while atual is not None:
+                    caminho.insert(0, atual)
+                    atual = pais[atual]
+                return caminho
+            
+            for vizinho, cap_residual in residual_adj[atual].items():
+                if vizinho not in pais and cap_residual > 0:
+                    pais[vizinho] = atual
+                    fila.append(vizinho)
+        return None
+
+    fluxo_maximo = 0.0
+    caminhos_aumentantes = []
+
+    # 3. Loop Principal do Ford-Fulkerson
+    while True:
+        # Construir a rede residual explicitamente a partir do estado atual de F
+        rede_residual = {n: {} for n in F.nodes()}
+        for u, v, data in F.edges(data=True):
+            cap = data.get('weight', 0.0)
+            flx = data.get('flow', 0.0)
+            
+            # Aresta direta: capacidade restante
+            cap_direta = cap - flx
+            if cap_direta > 0:
+                rede_residual[u][v] = rede_residual[u].get(v, 0.0) + cap_direta
+                
+            # Aresta reversa: fluxo que pode ser cancelado
+            if flx > 0:
+                rede_residual[v][u] = rede_residual[v].get(u, 0.0) + flx
+
+        # Buscar caminho aumentante na rede residual
+        caminho = encontrar_caminho_bfs(rede_residual, s_ficticio, t_ficticio)
+        if not caminho:
+            break  # Nenhum caminho encontrado = fluxo máximo atingido
+
+        # Encontrar a capacidade gargalo do caminho escolhido
+        gargalo = float('inf')
+        for i in range(len(caminho) - 1):
+            u, v = caminho[i], caminho[i+1]
+            gargalo = min(gargalo, rede_residual[u][v])
+
+        # Atualizar os fluxos ao longo do caminho na rede original
+        for i in range(len(caminho) - 1):
+            u, v = caminho[i], caminho[i+1]
+            if F.has_edge(u, v):
+                F[u][v]['flow'] += gargalo
+            else:
+                # Se a aresta percorrida na rede residual for reversa
+                F[v][u]['flow'] -= gargalo
+
+        fluxo_maximo += gargalo
+        caminhos_aumentantes.append((caminho, gargalo))
+        
+        if exibir_passos:
+            print(f"Caminho Aumentante: {' -> '.join(caminho)} | Gargalo: {gargalo}")
+
+    # Montar a tabela final apenas com as arestas originais do grafo
+    tabela_fluxos = {}
+    for u, v in G.edges():
+        tabela_fluxos[(u, v)] = {
+            'capacidade': F[u][v]['weight'],
+            'fluxo': F[u][v]['flow']
+        }
+
+    return fluxo_maximo, caminhos_aumentantes, tabela_fluxos, s_ficticio, t_ficticio
+
+
+def visualizar_fluxo_maximo(G, tabela_fluxos):
+    """
+    Gera o plot do grafo destacando em vermelho as arestas onde o fluxo é igual à capacidade
+    (arestas saturadas / gargalos) e exibindo o rótulo como Fluxo/Capacidade.
+    """
+    pos = nx.spring_layout(G, seed=42)
+    
+    arestas_saturadas = []
+    arestas_com_fluxo = []
+    arestas_vazias = []
+    
+    labels_arestas = {}
+    
+    for u, v in G.edges():
+        fluxo = tabela_fluxos[(u, v)]['fluxo']
+        capacidade = tabela_fluxos[(u, v)]['capacidade']
+        labels_arestas[(u, v)] = f"{int(fluxo)}/{int(capacidade)}"
+        
+        if fluxo == capacidade and capacidade > 0:
+            arestas_saturadas.append((u, v))
+        elif fluxo > 0:
+            arestas_com_fluxo.append((u, v))
+        else:
+            arestas_vazias.append((u, v))
+
+    # Desenhar os nós
+    nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=1000)
+    nx.draw_networkx_labels(G, pos, font_size=12, font_weight='bold')
+    
+    # Desenhar as arestas por categorias de fluxo
+    nx.draw_networkx_edges(G, pos, edgelist=arestas_vazias, edge_color='gray', width=1.5, style='dashed', arrowsize=15)
+    nx.draw_networkx_edges(G, pos, edgelist=arestas_com_fluxo, edge_color='blue', width=2.5, arrowsize=18)
+    nx.draw_networkx_edges(G, pos, edgelist=arestas_saturadas, edge_color='red', width=4.0, arrowsize=22)
+    
+    # Rótulos das arestas (Fluxo/Capacidade)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=labels_arestas, font_size=10)
+    
+    plt.title("Rede de Fluxo Máximo Final\n(Vermelho: Saturada | Azul: Com Fluxo | Tracejado: Vazia)")
+    plt.axis('off')
+    plt.show()
